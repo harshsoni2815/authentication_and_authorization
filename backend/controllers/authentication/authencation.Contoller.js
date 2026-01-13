@@ -31,18 +31,19 @@ async function signupController(req, res) {
       password,
       project: "chat",
     });
-
+ 
     if (newUser) {
       const token = getToken(newUser.id);
+      delete newUser.dataValues.password; // Remove password from response
       res.status(200).json({
         success: true,
         message: "successfully register",
-        userId: newUser.id,
         token,
+        newUser
       });
     }
   } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.status(500).json({ success: false, message: "Internal server error", error });
   }
 }
 
