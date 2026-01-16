@@ -4,48 +4,71 @@ import bcrypt from "bcryptjs";
 import getToken from "../../utils/Jwt.js";
 
 async function signupController(req, res) {
-  const { first_name, last_name, email, phone_number, password } = req.body;
-
   try {
+    const { first_name, last_name, email, phone_number, password } = req.body;
+
+    /* 1️⃣ Contract validation */
     if (!first_name || !last_name || !email || !phone_number || !password) {
-      return res.status(400).json({ success: false, message: "wrong input " });
+      return res.status(400).json({
+        success: false,
+        error_code: "VALIDATION_ERROR",
+        message: "Required fields are missing",
+      });
     }
 
-    const user = await User.findOne({
+    /* 2️⃣ Check duplicate user */
+    const existingUser = await User.findOne({
       where: {
-        [Op.or]: [{ email: email }, { phone_number: phone_number }],
+        [Op.or]: [{ email }, { phone_number }],
       },
     });
 
-    if (user) {
-      return res
-        .status(400)
-        .json({ message: "already a user is there", success: false });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        error_code: "USER_ALREADY_EXISTS",
+        message: "User already exists",
+      });
     }
 
+    /* 3️⃣ Create user */
     const newUser = await User.create({
       first_name,
       last_name,
       email,
       phone_number,
-      password,
+      password, // should be hashed
       project: "chat",
     });
- 
-    if (newUser) {
-      const token = getToken(newUser.id);
-      delete newUser.dataValues.password; // Remove password from response
-      res.status(200).json({
-        success: true,
-        message: "successfully register",
+
+    /* 4️⃣ Token generation (Auth service responsibility) */
+    const token = getToken(newUser.id);
+
+    /* 5️⃣ Sanitize response */
+    const user = newUser.toJSON();
+    delete user.password;
+
+    /* 6️⃣ Final response */
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      data: {
+        user,
         token,
-        newUser
-      });
-    }
+      },
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error", error });
+    console.error("[AUTH-SERVICE] SIGNUP ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      error_code: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong",
+    });
   }
 }
+
 
 async function loginController(req, res) {
   const { email = "", phone_number = "", password } = req.body;
