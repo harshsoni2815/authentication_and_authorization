@@ -82,7 +82,7 @@ async function loginController(req, res) {
     const pass = await bcrypt.compare(password, user.password);
 
     if (!pass) {
-      res.status(401).json({ success: false, message: "Wrong password" });
+     return  res.status(401).json({ success: false, message: "Wrong password" });
     }
 
     const token = getToken(user.id);
@@ -90,7 +90,7 @@ async function loginController(req, res) {
       .status(200)
       .json({ success: true, message: "successfully Logged In", token });
   } catch (error) {
-    res.status(500).json({ message: "Internal server error", error: error });
+    return res.status(500).json({ message: "Internal server errors", error: error });
   }
 }
 
